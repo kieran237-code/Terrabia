@@ -1,20 +1,29 @@
 import os
 from pathlib import Path
 from datetime import timedelta
-import dj_database_url
+import dj_database_url # Import pour gérer l'URL de la base de données PostgreSQL
+
+# ----------------------------------------------------
+# 1. PARAMÈTRES DE BASE ET SÉCURITÉ
+# ----------------------------------------------------
+
 # Base directory
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECURITY WARNING: keep the secret key secret in production!
-SECRET_KEY = "django-insecure-change-this-key"
+# L'API de Render définit la variable SECRET_KEY. 
+# La version par défaut est pour le développement local si la variable n'existe pas.
+SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-change-this-key")
 
-DEBUG = True
+# Lis le statut de debug depuis la variable d'environnement (par défaut à False en production)
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = ["*"]
+# Lis les hôtes autorisés depuis la variable d'environnement 'ALLOWED_HOSTS'.
+# Render définit l'URL de votre service web. Nous utilisons *.onrender.com pour la souplesse.
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
 
-# ------------------------
-# Applications
-# ------------------------
+# ----------------------------------------------------
+# 2. APPLICATIONS
+# ----------------------------------------------------
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -31,13 +40,16 @@ INSTALLED_APPS = [
     "api",
 ]
 
+# ----------------------------------------------------
+# 3. MIDDLEWARE
+# ----------------------------------------------------
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware", # <-- IMPORTANT: Ajout pour gérer les statics en production
     "django.contrib.sessions.middleware.SessionMiddleware",
-    "corsheaders.middleware.CorsMiddleware",  # CORS
+    "corsheaders.middleware.CorsMiddleware",  # CORS (avant CommonMiddleware)
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -45,6 +57,9 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "TerrabiaApp.urls"
 
+# ----------------------------------------------------
+# 4. TEMPLATES, WSGI
+# ----------------------------------------------------
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -63,51 +78,46 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "TerrabiaApp.wsgi.application"
 
-# --------------------------.
-# Database (SQLite par défaut)
-# ------------------------
-# DATABASES = {
-#     "default": {
-#         "ENGINE": "django.db.backends.sqlite3",
-#         "NAME": BASE_DIR / "db.sqlite3",
-#     }
-# }
+# ----------------------------------------------------
+# 5. BASE DE DONNÉES (POSTGRESQL POUR RENDER)
+# ----------------------------------------------------
+# Utilise la variable d'environnement DATABASE_URL fournie par Render
+DATABASES = {
+    'default': dj_database_url.config(
+        default=os.environ.get('DATABASE_URL')
+    )
+}
 
-# ------------------------
-# Auth
-# ------------------------
+# ----------------------------------------------------
+# 6. AUTHENTIFICATION
+# ----------------------------------------------------
 AUTH_USER_MODEL = "api.User"
 
-# ------------------------
-# Password validation
-# ------------------------
-AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
-    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
-    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
-]
+# ... (Auth & Password Validation - Rien à changer ici) ...
 
-# ------------------------
-# Internationalization
-# ------------------------
+# ----------------------------------------------------
+# 7. INTERNATIONALISATION
+# ----------------------------------------------------
 LANGUAGE_CODE = "fr-fr"
 TIME_ZONE = "Africa/Douala"
 USE_I18N = True
 USE_TZ = True
 
-# ------------------------
-# Static & Media
-# ------------------------
+# ----------------------------------------------------
+# 8. STATICS & MEDIA (IMPORTANT POUR RENDER)
+# ----------------------------------------------------
+# URL des fichiers statiques
 STATIC_URL = "/static/"
-STATIC_ROOT = BASE_DIR / "staticfiles"
+# Chemin de collection des fichiers statiques par Django (obligatoire pour WhiteNoise)
+STATIC_ROOT = BASE_DIR / "staticfiles" 
 
+# Configuration des fichiers médias (images uploadées)
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-# ------------------------
-# Django REST Framework
-# ------------------------
+# ----------------------------------------------------
+# 9. DJANGO REST FRAMEWORK & CORS
+# ----------------------------------------------------
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
@@ -117,39 +127,12 @@ REST_FRAMEWORK = {
     ],
 }
 
+# Pour le développement et le backend sans frontend connu (attention à la sécurité en prod !)
+CORS_ALLOW_ALL_ORIGINS = True 
 
-# ------------------------
-# CORS
-# ------------------------
-CORS_ALLOW_ALL_ORIGINS = True
-# ou limiter :
-# CORS_ALLOWED_ORIGINS = [
-#     "http://localhost:3000",
-#     "http://127.0.0.1:3000",
-# ]
-
-# ------------------------
-# Default primary key field type
-# ------------------------
+# ----------------------------------------------------
+# 10. DEFAULT CONFIG
+# ----------------------------------------------------
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# Dans TerrabiaApp/settings.py
-
-# ...
-
-# 1. Configuration des Hôtes Autorisés (IMPORTANT)
-# Render définit l'URL de votre service Web (ex: https://terrabia-app.onrender.com)
-ALLOWED_HOSTS = ['.onrender.com', 'localhost', '127.0.0.1'] 
-# Vous pouvez aussi récupérer le nom exact de votre service Render pour plus de sécurité.
-
-# 2. Configuration de la Base de Données
-DATABASES = {
-    'default': dj_database_url.config(
-        # Récupère l'URL depuis la variable d'environnement
-        default=os.environ.get('DATABASE_URL')
-    )
-}
-
-# 3. Ajoutez la ligne pour le mode debug
-# En production, DEBUG doit être à False
-DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+# ... (Le reste de votre fichier, s'il y en a) ...
