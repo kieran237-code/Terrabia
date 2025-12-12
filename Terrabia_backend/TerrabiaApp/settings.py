@@ -65,12 +65,12 @@ WSGI_APPLICATION = "TerrabiaApp.wsgi.application"
 # --------------------------.
 # Database (SQLite par défaut)
 # ------------------------
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
-}
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.sqlite3",
+#         "NAME": BASE_DIR / "db.sqlite3",
+#     }
+# }
 
 # ------------------------
 # Auth
@@ -131,3 +131,26 @@ CORS_ALLOW_ALL_ORIGINS = True
 # Default primary key field type
 # ------------------------
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Dans TerrabiaApp/settings.py
+
+import os
+import dj_database_url
+# ...
+
+# 1. Configuration des Hôtes Autorisés (IMPORTANT)
+# Render définit l'URL de votre service Web (ex: https://terrabia-app.onrender.com)
+ALLOWED_HOSTS = ['.onrender.com', 'localhost', '127.0.0.1'] 
+# Vous pouvez aussi récupérer le nom exact de votre service Render pour plus de sécurité.
+
+# 2. Configuration de la Base de Données
+DATABASES = {
+    'default': dj_database_url.config(
+        # Récupère l'URL depuis la variable d'environnement
+        default=os.environ.get('DATABASE_URL')
+    )
+}
+
+# 3. Ajoutez la ligne pour le mode debug
+# En production, DEBUG doit être à False
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
