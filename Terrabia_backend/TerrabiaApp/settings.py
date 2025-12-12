@@ -19,7 +19,8 @@ DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 # Lis les hôtes autorisés depuis la variable d'environnement 'ALLOWED_HOSTS'.
 # Render définit l'URL de votre service web. Nous utilisons *.onrender.com pour la souplesse.
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
+ALLOWED_HOSTS = ['192.168.1.101', '127.0.0.1', 'localhost','0.0.0.0',os.getenv("RENDER_EXTERNAL_HOSTNAME")]
+
 
 # ----------------------------------------------------
 # 2. APPLICATIONS
