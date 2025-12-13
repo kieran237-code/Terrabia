@@ -177,7 +177,7 @@ MEDIA_ROOT = BASE_DIR / "media"
 # ----------------------------------------------------
 # En développement, vous pouvez utiliser CORS_ALLOW_ALL_ORIGINS = True
 # En production, spécifiez les origines autorisées
-CORS_ALLOW_ALL_ORIGINS = TRUE  # Seulement en mode debug
+CORS_ALLOW_ALL_ORIGINS = True  # Seulement en mode debug
 
 if not DEBUG:
     CORS_ALLOWED_ORIGINS = [
