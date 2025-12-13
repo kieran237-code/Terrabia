@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 // ✅ Import de ArrowLeft
 import { Mail, Lock, Eye, EyeOff, Leaf, ArrowLeft } from 'lucide-react'; 
 
-const API_BASE_URL = 'https://terrabia-1.onrender.com'; 
+const API_BASE_URL = 'https://terrabia-2.onrender.com'; 
 const LOGIN_URL = `${API_BASE_URL}/api/login/`;
 
 // Composant InputField (inchangé)

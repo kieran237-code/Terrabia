@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Search, ChevronDown, X, ShoppingCart, Leaf, Star, Facebook, Instagram, Twitter, MapPin, Phone, Mail, LogOut, User } from 'lucide-react';
 import {api} from '../utils/api'
 // URL de base de votre API
-const API_BASE_URL = 'https://terrabia-1.onrender.com';
+const API_BASE_URL = 'https://terrabia-2.onrender.com';
 // URL de l'API des produits (d'après votre configuration DRF: /api/produits)
 const PRODUCT_LIST_URL = `${API_BASE_URL}/api/produits/`; 
 

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, User, Leaf, ShoppingBag, Tractor, Image, Globe, Truck } from 'lucide-react';
 
 // 🎯 CHANGEMENT CRITIQUE ICI : Utilisation de l'URL du Backend déployé
-const API_BASE_URL = 'https://terrabia-1.onrender.com'; 
+const API_BASE_URL = 'https://terrabia-2.onrender.com'; 
 const REGISTER_URL = `${API_BASE_URL}/api/register/`;
 
 // Composant InputField (inchangé)

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Leaf, Plus, X, LogOut, Trash2, Package } from 'lucide-react';
 
-const API_BASE_URL = 'https://terrabia-1.onrender.com/api';
+const API_BASE_URL = 'https://terrabia-2.onrender.com/api';
 
 const FarmerProductsPage = () => {
   const [products, setProducts] = useState([]);

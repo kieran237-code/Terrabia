@@ -187,7 +187,7 @@ const CategoryCard = ({ category }) => {
         }
         
         // Si c'est un chemin relatif, ajouter l'URL de base
-        return `https://terrabia-1.onrender.com${imagePath.startsWith('/') ? imagePath : '/' + imagePath}`;
+        return `https://terrabia-2.onrender.com${imagePath.startsWith('/') ? imagePath : '/' + imagePath}`;
     };
 
     const title = category.nom || 'Catégorie inconnue';
@@ -245,7 +245,7 @@ const CategoriesPage = () => {
                     headers['Authorization'] = `Bearer ${token}`;
                 }
                 
-                const response = await fetch('https://terrabia-1.onrender.com/api/categories/', {
+                const response = await fetch('https://terrabia-2.onrender.com/api/categories/', {
                     headers: headers,
                 });
                 

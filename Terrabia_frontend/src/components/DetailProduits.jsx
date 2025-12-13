@@ -20,7 +20,7 @@ import {
 // Importez votre instance d'API
 import { api } from '../utils/api';
 
-const API_BASE_URL = "https://terrabia-1.onrender.com";
+const API_BASE_URL = "https://terrabia-2.onrender.com";
 
 // --- Composants Réutilisés (Header et Footer) ---
 
