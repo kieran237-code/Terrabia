@@ -156,7 +156,7 @@ const AgencyCard = ({ agency }) => {
         if (agency.image_url) {
             const imageUrl = agency.image_url.startsWith('http') 
                 ? agency.image_url 
-                : `http://localhost:8000${agency.image_url}`;
+                : `https://terrabia-1.onrender.com${agency.image_url}`;
             
             return (
                 <figure className="h-48 overflow-hidden">
@@ -352,7 +352,7 @@ const DeliveryAgenciesPage = () => {
                     headers['Authorization'] = `Bearer ${token}`;
                 }
                 
-                const response = await fetch('http://localhost:8000/api/agences/', {
+                const response = await fetch('https://terrabia-1.onrender.com/api/agences/', {
                     headers: headers,
                 });
                 

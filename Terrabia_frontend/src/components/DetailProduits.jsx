@@ -20,7 +20,7 @@ import {
 // Importez votre instance d'API
 import { api } from '../utils/api';
 
-const API_BASE_URL = "http://localhost:8000";
+const API_BASE_URL = "https://terrabia-1.onrender.com";
 
 // --- Composants Réutilisés (Header et Footer) ---
 
@@ -128,7 +128,7 @@ const Footer = () => (
             <div>
                 <h4 className="text-xl font-semibold mb-4 border-b border-gray-700 pb-2">Navigation</h4>
                 <ul className="space-y-2 text-sm">
-                    <li><a href="/produits" className="hover:text-green-500">Produits</a></li>
+                    <li><a href="/produit" className="hover:text-green-500">Produits</a></li>
                     <li><a href="/categorie" className="hover:text-green-500">Catégories</a></li>
                     <li><a href="/livraison" className="hover:text-green-500">Agences de livraison</a></li>
                     <li><a href="/register?role=agriculteur" className="hover:text-green-500">Devenir vendeur</a></li>

@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-// 1. Importer useNavigate si vous utilisez React Router
 import { useNavigate } from 'react-router-dom'; 
 import { Mail, Lock, Eye, EyeOff, User, Leaf, ShoppingBag, Tractor, Image, Globe, Truck } from 'lucide-react';
 
-// URL de base de votre API (à remplacer par votre adresse réelle)
-const API_BASE_URL = 'http://localhost:8000'; 
+// 🎯 CHANGEMENT CRITIQUE ICI : Utilisation de l'URL du Backend déployé
+const API_BASE_URL = 'https://terrabia-1.onrender.com'; 
 const REGISTER_URL = `${API_BASE_URL}/api/register/`;
 
 // Composant InputField (inchangé)
@@ -79,7 +78,6 @@ const RegisterPage = () => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
   
-  // 2. Initialiser le hook de navigation
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -95,7 +93,7 @@ const RegisterPage = () => {
     photo_profil: null,      
   });
 
-  // Composant pour les cartes de sélection de rôle (modifié pour inclure AGENCE)
+  // Composant pour les cartes de sélection de rôle
   const RoleCard = ({ selectedRole, currentRole, icon: Icon, title, subtitle, onClick }) => (
     <div
       className={`flex flex-col items-center justify-center p-6 border-2 rounded-2xl cursor-pointer transition-all duration-300 w-1/3 h-40 ${
@@ -152,10 +150,12 @@ const RegisterPage = () => {
     
     setLoading(true);
     
+    // Création de l'objet FormData pour gérer les fichiers et les champs
     const form = new FormData();
     
     form.append('email', formData.email);
-    form.append('password', formData.motDePasse);
+    // Le nom du champ de mot de passe doit correspondre à celui attendu par Django (souvent 'password')
+    form.append('password', formData.motDePasse); 
     form.append('role', role);
     
     if (role === 'ACHETEUR') {
@@ -176,6 +176,8 @@ const RegisterPage = () => {
     try {
       const response = await fetch(REGISTER_URL, {
         method: 'POST',
+        // NE PAS DÉFINIR 'Content-Type': 'application/json' AVEC FormData, 
+        // le navigateur gère le multipart/form-data automatiquement.
         body: form,
       });
 
@@ -185,16 +187,24 @@ const RegisterPage = () => {
         setSuccess(true);
         console.log("Inscription réussie:", data);
         
-        // 3. Redirection après 3 secondes
+        // Redirection après 3 secondes
         setTimeout(() => {
             navigate('/login');
         }, 3000);
         
       } else {
+        // Gestion des erreurs de validation de Django
         const errorMessages = Object.entries(data)
-          .map(([key, value]) => `${key}: ${value.join(' ')}`)
+          .map(([key, value]) => {
+              // Gérer les messages sous forme de tableau ou de chaîne
+              const message = Array.isArray(value) ? value.join(' ') : value;
+              return `${key}: ${message}`;
+          })
           .join(' | ');
-        setError(`Échec de l'inscription. Détails: ${errorMessages}`);
+          
+        // Si l'erreur est juste un détail (ex: mot de passe)
+        const errorMessage = data.detail || data.message || errorMessages;
+        setError(`Échec de l'inscription. Détails: ${errorMessage}`);
         console.error("Erreur d'inscription:", data);
       }
     } catch (err) {
@@ -284,6 +294,7 @@ const RegisterPage = () => {
               icon={Mail}
               value={formData.email}
               onChange={handleChange}
+              required
             />
             
             <InputField 
@@ -294,6 +305,7 @@ const RegisterPage = () => {
               value={formData.motDePasse}
               onChange={handleChange}
               isPassword={true}
+              required
             />
 
             <InputField 
@@ -304,6 +316,7 @@ const RegisterPage = () => {
               value={formData.confirmerMotDePasse}
               onChange={handleChange}
               isPassword={true}
+              required
             />
 
             {/* Section 3: Champs spécifiques au rôle */}
@@ -320,6 +333,7 @@ const RegisterPage = () => {
                             icon={User}
                             value={formData.prenom}
                             onChange={handleChange}
+                            required
                         />
                         <InputField 
                             label="Nom" 
@@ -328,6 +342,7 @@ const RegisterPage = () => {
                             icon={User}
                             value={formData.nom}
                             onChange={handleChange}
+                            required
                         />
                     </div>
                 </div>
@@ -348,6 +363,7 @@ const RegisterPage = () => {
                           value={formData.specialite}
                           onChange={handleChange}
                           className="select w-full pl-12 h-14 bg-white border-2 border-gray-200 rounded-xl focus:border-emerald-500 focus:outline-none transition-colors text-gray-700"
+                          required
                         >
                           <option value="FRUIT">Fruits</option>
                           <option value="LEGUME">Légumes</option>
@@ -372,6 +388,7 @@ const RegisterPage = () => {
                         icon={Truck}
                         value={formData.nom_agence}
                         onChange={handleChange}
+                        required
                     />
                     
                     <div className="grid grid-cols-2 gap-4">
@@ -383,6 +400,7 @@ const RegisterPage = () => {
                             icon={User}
                             value={formData.numero_telephone}
                             onChange={handleChange}
+                            required
                         />
                         <InputField 
                             label="Localité" 
@@ -391,6 +409,7 @@ const RegisterPage = () => {
                             icon={Globe}
                             value={formData.localite}
                             onChange={handleChange}
+                            required
                         />
                     </div>
                     

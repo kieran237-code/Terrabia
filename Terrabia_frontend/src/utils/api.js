@@ -1,5 +1,5 @@
 // src/utils/api.js
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = 'https://terrabia-1.onrender.com';;
 
 class ApiClient {
     constructor() {

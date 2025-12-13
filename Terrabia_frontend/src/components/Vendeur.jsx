@@ -1,27 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Leaf, Plus, X, LogOut, Trash2, Package } from 'lucide-react';
 
-const API_BASE_URL = 'http://localhost:8000/api';
-
-// Liste Statique des Catégories (IDs arbitraires pour le frontend)
-const STATIC_CATEGORIES = [
-    // ... (unchanged)
-    { id: 1, nom: "🍎 Fruits", description: "Fruits frais de saison" },
-    { id: 2, nom: "🥬 Légumes", description: "Légumes frais du potager" },
-    { id: 3, nom: "🥔 Tubercules", description: "Manioc, igname, patate douce, etc." },
-    { id: 4, nom: "🌾 Céréales", description: "Maïs, riz, mil, sorgho" },
-    { id: 5, nom: "🫘 Légumineuses", description: "Haricots, arachides, niébé" },
-    { id: 6, nom: "🌶️ Épices", description: "Piment, gingembre, ail, oignon" },
-    { id: 7, nom: "🥛 Produits laitiers", description: "Lait, fromage, yaourt" },
-    { id: 8, nom: "🍗 Viandes", description: "Poulet, bœuf, porc, chèvre" },
-    { id: 9, nom: "🐟 Poissons", description: "Poissons frais et fumés" },
-    { id: 10, nom: "📦 Autres", description: "Autres produits agricoles" },
-];
-
+const API_BASE_URL = 'https://terrabia-1.onrender.com/api';
 
 const FarmerProductsPage = () => {
   const [products, setProducts] = useState([]);
-  const categories = STATIC_CATEGORIES; 
+  const [categories, setCategories] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -30,33 +14,176 @@ const FarmerProductsPage = () => {
     prix: '',
     etat: 'disponible',
     categorie: '', 
-    photos: []
+    photos: [] // CORRIGÉ: doit être un tableau
   });
   const [previewImages, setPreviewImages] = useState([]);
 
   useEffect(() => {
     fetchProducts();
+    fetchCategories();
   }, []);
 
   const getCategoryName = (id) => {
     const category = categories.find(cat => cat.id === id);
-    return category ? category.nom : `ID: ${id} (Inconnue)`;
+    return category ? category.nom : `Catégorie ${id}`;
   };
 
-  const getToken = () => {
-    // ✅ CORRECTION : Utilisation de la clé 'access_token' pour correspondre à LoginPage
-    const token = localStorage.getItem('access_token'); 
-    if (!token) {
-      console.error("Token d'authentification manquant. Redirection...");
-      // Décommentez pour rediriger si le token est manquant
-      // window.location.href = '/login'; 
+  const refreshAccessToken = async () => {
+    const refreshToken = localStorage.getItem('refresh_token');
+    
+    if (!refreshToken) {
+      console.error("Refresh token manquant.");
+      handleLogout();
       return null;
     }
-    return token;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/token/refresh/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          refresh: refreshToken
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Échec du rafraîchissement du token');
+      }
+
+      const data = await response.json();
+      
+      localStorage.setItem('access_token', data.access);
+      
+      if (data.refresh) {
+        localStorage.setItem('refresh_token', data.refresh);
+      }
+      
+      return data.access;
+    } catch (error) {
+      console.error('Erreur lors du rafraîchissement:', error);
+      return null;
+    }
+  };
+
+  const getToken = async () => {
+    let token = localStorage.getItem('access_token');
+    
+    if (!token) {
+      console.error("Token d'authentification manquant.");
+      return null;
+    }
+
+    try {
+      const tokenPayload = JSON.parse(atob(token.split('.')[1]));
+      const expirationTime = tokenPayload.exp * 1000;
+      const currentTime = Date.now();
+
+      if (currentTime >= expirationTime - 300000 || currentTime >= expirationTime) {
+        try {
+          const newToken = await refreshAccessToken();
+          if (newToken) {
+            token = newToken;
+          } else {
+            handleLogout();
+            return null;
+          }
+        } catch (error) {
+          console.error('Erreur lors du rafraîchissement du token:', error);
+          handleLogout();
+          return null;
+        }
+      }
+
+      return token;
+    } catch (error) {
+      console.error('Erreur lors de la vérification du token:', error);
+      handleLogout();
+      return null;
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const token = await getToken();
+      if (!token) return;
+
+      const response = await fetch(`${API_BASE_URL}/categories/`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setCategories(Array.isArray(data) ? data : data.results || []);
+        
+        if (data.length === 0 || (data.results && data.results.length === 0)) {
+          console.log('Aucune catégorie trouvée, création possible');
+        }
+      } else if (response.status === 404) {
+        console.log('Endpoint /categories/ non trouvé');
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des catégories:', error);
+    }
+  };
+
+  const createDefaultCategories = async () => {
+    const defaultCategories = [
+      { nom: "Fruits", description: "Fruits frais de saison" },
+      { nom: "Légumes", description: "Légumes frais du potager" },
+      { nom: "Tubercules", description: "Manioc, igname, patate douce, etc." },
+      { nom: "Céréales", description: "Maïs, riz, mil, sorgho" },
+      { nom: "Légumineuses", description: "Haricots, arachides, niébé" },
+      { nom: "Épices", description: "Piment, gingembre, ail, oignon" },
+      { nom: "Produits laitiers", description: "Lait, fromage, yaourt" },
+      { nom: "Viandes", description: "Poulet, bœuf, porc, chèvre" },
+      { nom: "Poissons", description: "Poissons frais et fumés" },
+      { nom: "Autres", description: "Autres produits agricoles" },
+    ];
+
+    try {
+      const token = await getToken();
+      if (!token) return;
+      
+      const createdCategories = [];
+      
+      for (const category of defaultCategories) {
+        const response = await fetch(`${API_BASE_URL}/categories/`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            nom: category.nom,
+            description: category.description
+          })
+        });
+        
+        if (response.ok) {
+          const newCategory = await response.json();
+          createdCategories.push(newCategory);
+          console.log(`Catégorie ${category.nom} créée avec ID: ${newCategory.id}`);
+        } else {
+          console.log(`Erreur lors de la création de la catégorie ${category.nom}:`, response.status);
+        }
+      }
+      
+      if (createdCategories.length > 0) {
+        setCategories(createdCategories);
+        alert(`${createdCategories.length} catégories créées avec succès!`);
+      }
+      
+    } catch (error) {
+      console.error('Erreur lors de la création des catégories:', error);
+    }
   };
 
   const fetchProducts = async () => {
-    const token = getToken();
+    const token = await getToken();
     if (!token) return;
 
     try {
@@ -67,6 +194,10 @@ const FarmerProductsPage = () => {
       });
       
       if (!response.ok) {
+        if (response.status === 401) {
+          handleLogout();
+          return;
+        }
         throw new Error(`Erreur HTTP: ${response.status}`);
       }
 
@@ -77,7 +208,6 @@ const FarmerProductsPage = () => {
       setProducts([]);
     }
   };
-
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -103,15 +233,9 @@ const FarmerProductsPage = () => {
       alert('Veuillez remplir tous les champs obligatoires et ajouter au moins une photo.');
       return;
     }
-    
-    if (!Number.isInteger(parseInt(formData.categorie))) {
-         alert('Veuillez sélectionner une catégorie valide.');
-         return;
-    }
-
 
     setLoading(true);
-    const token = getToken();
+    const token = await getToken();
     if (!token) {
         setLoading(false);
         return;
@@ -121,29 +245,39 @@ const FarmerProductsPage = () => {
       const formDataToSend = new FormData();
       
       formDataToSend.append('nom', formData.nom);
-      formDataToSend.append('quantite', formData.quantite);
-      formDataToSend.append('prix', formData.prix);
+      formDataToSend.append('quantite', parseInt(formData.quantite));
+      formDataToSend.append('prix', parseFloat(formData.prix));
       formDataToSend.append('etat', formData.etat);
-      formDataToSend.append('categorie', formData.categorie); 
       
-      formData.photos.forEach((photo) => {
+      const categorieId = parseInt(formData.categorie);
+      if (isNaN(categorieId)) {
+        throw new Error('ID de catégorie invalide');
+      }
+      formDataToSend.append('categorie', categorieId);
+      
+      // CORRIGÉ: Ajouter chaque image avec le même nom de champ "photos"
+      formData.photos.forEach((photo, index) => {
         formDataToSend.append('photos', photo);
       });
+
+      // DEBUG: Afficher le contenu du FormData
+      console.log('FormData envoyé:');
+      for (let pair of formDataToSend.entries()) {
+        console.log(pair[0] + ': ', pair[1]);
+      }
 
       const response = await fetch(`${API_BASE_URL}/produits/`, {
         method: 'POST',
         headers: {
-          // Utilisation du token récupéré par getToken
           'Authorization': `Bearer ${token}`
+          // Ne pas mettre 'Content-Type' pour FormData
         },
         body: formDataToSend
       });
 
       if (response.ok) {
         const newProduct = await response.json();
-        const categoryName = getCategoryName(newProduct.categorie); 
-        
-        setProducts(prev => [{ ...newProduct, categorie_nom: categoryName }, ...prev]);
+        setProducts(prev => [newProduct, ...prev]);
         setShowModal(false);
         resetForm();
         alert('Produit ajouté avec succès !');
@@ -169,11 +303,12 @@ const FarmerProductsPage = () => {
       categorie: '',
       photos: []
     });
+    // Libérer les URLs d'aperçu
+    previewImages.forEach(preview => URL.revokeObjectURL(preview));
     setPreviewImages([]);
   };
 
   const handleLogout = () => {
-    // ✅ CORRECTION : Suppression du token stocké
     localStorage.removeItem('access_token'); 
     localStorage.removeItem('refresh_token'); 
     localStorage.removeItem('user'); 
@@ -185,7 +320,7 @@ const FarmerProductsPage = () => {
       return;
     }
 
-    const token = getToken();
+    const token = await getToken();
     if (!token) return;
 
     try {
@@ -199,6 +334,8 @@ const FarmerProductsPage = () => {
       if (response.status === 204) { 
         setProducts(prev => prev.filter(p => p.id !== id));
         alert('Produit supprimé avec succès');
+      } else if (response.status === 401) {
+        handleLogout();
       } else {
         throw new Error(`Erreur de suppression: ${response.status}`);
       }
@@ -210,17 +347,13 @@ const FarmerProductsPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* --------------------------------- */}
-      {/* NAV BAR (Terrabia & Déconnexion) */}
-      {/* --------------------------------- */}
+      {/* NAV BAR */}
       <nav className="bg-white shadow-sm sticky top-0 z-40">
         <div className="container mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
-            {/* Logo Terrabia */}
             <a className="text-2xl font-bold text-green-700" href="/">
               <Leaf size={24} className="inline text-green-700 mr-1" /> Terrabia
             </a>
-            {/* Nav Bar (Publication et Déconnexion) */}
             <div className="flex items-center gap-4">
                 <a 
                     href="/publications" 
@@ -241,12 +374,8 @@ const FarmerProductsPage = () => {
       </nav>
 
       <div className="container mx-auto px-4 py-8">
-        
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            {/* ---------------------------------------------------- */}
-            {/* PARTIE 1: Allez, on fait une publication (Formulaire) */}
-            {/* ---------------------------------------------------- */}
+            {/* PARTIE 1: Formulaire */}
             <div className="lg:col-span-1">
                 <div className="bg-white p-6 shadow-xl rounded-lg sticky top-24">
                     <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
@@ -257,26 +386,33 @@ const FarmerProductsPage = () => {
                         Remplissez le formulaire ci-dessous pour mettre votre produit en vente.
                     </p>
                     
-                    {/* Bouton d'ouverture du modal */}
                     <button
                         onClick={() => setShowModal(true)}
-                        className="w-full flex items-center justify-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition shadow-md"
+                        className="w-full flex items-center justify-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition shadow-md mb-4"
                     >
                         <Plus size={20} />
                         Ajouter un nouveau produit
                     </button>
+
+                    {categories.length === 0 && (
+                      <button
+                        onClick={createDefaultCategories}
+                        className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition shadow-md"
+                      >
+                        <Plus size={20} />
+                        Créer les catégories par défaut
+                      </button>
+                    )}
                     
-                    {/* Contenu secondaire (Statistiques rapides) */}
                     <div className="mt-8 pt-4 border-t border-gray-100">
                         <p className="text-sm font-semibold text-gray-700">Statut actuel:</p>
                         <p className="text-lg text-green-600 mt-1">{products.length} produit(s) en ligne.</p>
+                        <p className="text-sm text-gray-500 mt-1">{categories.length} catégorie(s) disponible(s)</p>
                     </div>
                 </div>
             </div>
 
-            {/* ----------------------------------------------------------------- */}
-            {/* PARTIE 2: Affichage des publications et bouton supprimer (Liste) */}
-            {/* ----------------------------------------------------------------- */}
+            {/* PARTIE 2: Liste des produits */}
             <div className="lg:col-span-2">
                 <div className="flex justify-between items-center mb-6">
                     <h1 className="text-3xl font-bold text-gray-800">Mes Publications</h1>
@@ -351,9 +487,7 @@ const FarmerProductsPage = () => {
         </div>
       </div>
 
-      {/* ----------------------- */}
-      {/* MODAL (Formulaire d'ajout) */}
-      {/* ----------------------- */}
+      {/* MODAL */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -371,7 +505,7 @@ const FarmerProductsPage = () => {
             </div>
 
             <div className="p-6 space-y-4">
-              {/* --- NOM DU PRODUIT --- */}
+              {/* NOM DU PRODUIT */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Nom du produit *
@@ -386,28 +520,42 @@ const FarmerProductsPage = () => {
                 />
               </div>
 
-              {/* --- CATÉGORIE (LISTE STATIQUE) --- */}
+              {/* CATÉGORIE */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Catégorie *
                 </label>
-                <select
-                  name="categorie"
-                  value={formData.categorie}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                >
-                  <option value="" disabled>Sélectionner une catégorie</option>
-                  {categories.map(cat => (
-                    <option key={cat.id} value={cat.id}>
-                       {cat.nom} - {cat.description}
-                    </option>
-                  ))}
-                </select>
+                {categories.length === 0 ? (
+                  <div className="text-center p-4 border border-yellow-300 bg-yellow-50 rounded-lg">
+                    <p className="text-yellow-700 mb-2">Aucune catégorie disponible</p>
+                    <button
+                      onClick={createDefaultCategories}
+                      className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 transition"
+                    >
+                      Créer les catégories par défaut
+                    </button>
+                    <p className="text-sm text-yellow-600 mt-2">Après création, fermez et rouvrez ce formulaire</p>
+                  </div>
+                ) : (
+                  <select
+                    name="categorie"
+                    value={formData.categorie}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    required
+                  >
+                    <option value="">Sélectionner une catégorie</option>
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.nom} - {cat.description}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                {/* --- PRIX --- */}
+                {/* PRIX */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Prix (FCFA) *
@@ -423,7 +571,7 @@ const FarmerProductsPage = () => {
                     placeholder="5000"
                   />
                 </div>
-                {/* --- QUANTITÉ --- */}
+                {/* QUANTITÉ */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Quantité *
@@ -440,7 +588,7 @@ const FarmerProductsPage = () => {
                 </div>
               </div>
 
-              {/* --- ÉTAT --- */}
+              {/* ÉTAT */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   État *
@@ -457,7 +605,7 @@ const FarmerProductsPage = () => {
                 </select>
               </div>
 
-              {/* --- PHOTOS --- */}
+              {/* PHOTOS - CORRIGÉ: multiple images */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Photos du produit *
@@ -469,6 +617,7 @@ const FarmerProductsPage = () => {
                   onChange={handleImageChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 />
+                <p className="text-sm text-gray-500 mt-1">Vous pouvez sélectionner plusieurs images</p>
                 {previewImages.length > 0 && (
                   <div className="grid grid-cols-3 gap-2 mt-3">
                     {previewImages.map((preview, index) => (
@@ -496,7 +645,7 @@ const FarmerProductsPage = () => {
                 </button>
                 <button
                   onClick={handleSubmit}
-                  disabled={loading}
+                  disabled={loading || categories.length === 0}
                   className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:bg-gray-400"
                 >
                   {loading ? 'Ajout en cours...' : 'Ajouter le produit'}

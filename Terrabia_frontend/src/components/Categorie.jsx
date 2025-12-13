@@ -72,12 +72,12 @@ const Header = () => {
 
                     {isAuthenticated ? (
                         <>
-                            <a href="/profil">
+                            {/* <a href="/profil">
                                 <button className="btn btn-ghost hidden sm:inline-flex">
                                     <User size={20} className="mr-2" />
                                     {user?.email?.split('@')[0] || 'Mon Profil'}
                                 </button>
-                            </a>
+                            </a> */}
                             <button 
                                 onClick={logout}
                                 className="btn btn-ghost text-red-600 hover:text-red-700 hover:bg-red-50 hidden sm:inline-flex"
@@ -187,7 +187,7 @@ const CategoryCard = ({ category }) => {
         }
         
         // Si c'est un chemin relatif, ajouter l'URL de base
-        return `http://localhost:8000${imagePath.startsWith('/') ? imagePath : '/' + imagePath}`;
+        return `https://terrabia-1.onrender.com${imagePath.startsWith('/') ? imagePath : '/' + imagePath}`;
     };
 
     const title = category.nom || 'Catégorie inconnue';
@@ -245,7 +245,7 @@ const CategoriesPage = () => {
                     headers['Authorization'] = `Bearer ${token}`;
                 }
                 
-                const response = await fetch('http://localhost:8000/api/categories/', {
+                const response = await fetch('https://terrabia-1.onrender.com/api/categories/', {
                     headers: headers,
                 });
                 
