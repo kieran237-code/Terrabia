@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from datetime import timedelta
-#import dj_database_url # Import pour gérer l'URL de la base de données PostgreSQL
+import dj_database_url
 
 # ----------------------------------------------------
 # 1. PARAMÈTRES DE BASE ET SÉCURITÉ
@@ -18,9 +18,13 @@ SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-change-this-key")
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 # Lis les hôtes autorisés depuis la variable d'environnement 'ALLOWED_HOSTS'.
-# Render définit l'URL de votre service web. Nous utilisons *.onrender.com pour la souplesse.
-ALLOWED_HOSTS = ['192.168.1.101', '127.0.0.1', 'localhost','0.0.0.0',os.getenv("RENDER_EXTERNAL_HOSTNAME")]
-
+ALLOWED_HOSTS = [
+    '192.168.1.101', 
+    '127.0.0.1', 
+    'localhost',
+    '0.0.0.0',
+    os.getenv("RENDER_EXTERNAL_HOSTNAME", "")
+]
 
 # ----------------------------------------------------
 # 2. APPLICATIONS
@@ -46,33 +50,51 @@ INSTALLED_APPS = [
 # ----------------------------------------------------
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware", # <-- IMPORTANT: Ajout pour gérer les statics en production
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
-    "corsheaders.middleware.CorsMiddleware",  # CORS (avant CommonMiddleware)
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+# ----------------------------------------------------
+# 4. REST FRAMEWORK CONFIGURATION
+# ----------------------------------------------------
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
     'DATE_INPUT_FORMATS': ['%d/%m/%Y'],
 }
 
+# ----------------------------------------------------
+# 5. SIMPLE JWT CONFIGURATION
+# ----------------------------------------------------
+SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'VERIFYING_KEY': None,
     'AUTH_HEADER_TYPES': ('Bearer',),
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    'TOKEN_TYPE_CLAIM': 'token_type',
 }
-
-
 
 ROOT_URLCONF = "TerrabiaApp.urls"
 
 # ----------------------------------------------------
-# 4. TEMPLATES, WSGI
+# 6. TEMPLATES, WSGI
 # ----------------------------------------------------
 TEMPLATES = [
     {
@@ -93,34 +115,43 @@ TEMPLATES = [
 WSGI_APPLICATION = "TerrabiaApp.wsgi.application"
 
 # ----------------------------------------------------
-# 5. BASE DE DONNÉES (POSTGRESQL POUR RENDER)
+# 7. BASE DE DONNÉES (POSTGRESQL POUR RENDER)
 # ----------------------------------------------------
-# Utilise la variable d'environnement DATABASE_URL fournie par Render
-import dj_database_url
-
 DATABASES = {
     "default": dj_database_url.config(
-        default=os.getenv("DATABASE_URL"),
+        default=os.getenv("DATABASE_URL", "postgresql://localhost/terrabia"),
         conn_max_age=600,
-        ssl_require=True
+        ssl_require=not DEBUG  # SSL seulement en production
     )
 }
-# ⚠️ Il faut bien écrire ce bloc en dehors du dictionnaire REST_FRAMEWORK
-from django.conf.locale.fr import formats as fr_formats
-fr_formats.DATE_INPUT_FORMATS = ['%Y-%m-%d', '%d/%m/%Y', '%d-%m-%Y']
 
-# OU ALORS plus simplement :
+# ----------------------------------------------------
+# 8. DATE INPUT FORMATS
+# ----------------------------------------------------
 DATE_INPUT_FORMATS = ['%Y-%m-%d', '%d/%m/%Y', '%d-%m-%Y']
 
 # ----------------------------------------------------
-# 6. AUTHENTIFICATION
+# 9. AUTHENTIFICATION
 # ----------------------------------------------------
 AUTH_USER_MODEL = "api.User"
 
-# ... (Auth & Password Validation - Rien à changer ici) ...
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
+    },
+]
 
 # ----------------------------------------------------
-# 7. INTERNATIONALISATION
+# 10. INTERNATIONALISATION
 # ----------------------------------------------------
 LANGUAGE_CODE = "fr-fr"
 TIME_ZONE = "Africa/Douala"
@@ -128,9 +159,8 @@ USE_I18N = True
 USE_TZ = True
 
 # ----------------------------------------------------
-# 8. STATICS & MEDIA (IMPORTANT POUR RENDER)
+# 11. STATICS & MEDIA
 # ----------------------------------------------------
-# URL des fichiers statiques
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [
@@ -142,9 +172,21 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# ----------------------------------------------------
+# 12. CORS CONFIGURATION
+# ----------------------------------------------------
+# En développement, vous pouvez utiliser CORS_ALLOW_ALL_ORIGINS = True
+# En production, spécifiez les origines autorisées
+CORS_ALLOW_ALL_ORIGINS = DEBUG  # Seulement en mode debug
 
-# Pour le développement et le backend sans frontend connu (attention à la sécurité en prod !)
-CORS_ALLOW_ALL_ORIGINS = True  # Autorise tous les domaines (en dev seulement)
+if not DEBUG:
+    CORS_ALLOWED_ORIGINS = [
+        "https://terrabia-frontend.onrender.com",
+        "http://localhost:3000",
+        "http://127.0.0.1:5500",
+        "http://localhost:5173",
+        "http://127.0.0.1:5174",
+    ]
 
 CORS_ALLOW_CREDENTIALS = True
 
@@ -169,21 +211,20 @@ CORS_ALLOW_METHODS = [
     'PUT',
 ]
 
-
-# CORS Settings
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:5173",
-    "http://localhost:5174",  # si ton frontend est en React
-    "http://localhost:5500",  # ou ton port Flutter web
-    "http://127.0.0.1:5500",
-    "http://127.0.0.1:8000",  # optionnel
-]
-
-
 # ----------------------------------------------------
-# 10. DEFAULT CONFIG
+# 13. DEFAULT CONFIG
 # ----------------------------------------------------
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# ... (Le reste de votre fichier, s'il y en a) ...
+# ----------------------------------------------------
+# 14. SECURITY SETTINGS FOR PRODUCTION
+# ----------------------------------------------------
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
